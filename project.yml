@@ -21,8 +21,8 @@ settings:
     # 可直接分发，但用户首次打开需右键→打开，或清除隔离属性。
     CODE_SIGN_IDENTITY: "-"
     CODE_SIGN_STYLE: Automatic
-    MARKETING_VERSION: "1.0.0"
-    CURRENT_PROJECT_VERSION: "1"
+    MARKETING_VERSION: "1.0.1"
+    CURRENT_PROJECT_VERSION: "2"
     # 用 apple-generic 版本系统，让 Xcode 自己写入版本键。
     # 否则当 MARKETING_VERSION 传空时，Xcode 会把 Info.plist 里的
     # CFBundleShortVersionString / CFBundleVersion 静默删除。

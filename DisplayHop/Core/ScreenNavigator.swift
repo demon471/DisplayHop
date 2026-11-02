@@ -19,10 +19,19 @@ final class ScreenNavigator {
     }
 
     func moveFocusedWindow(_ direction: MoveDirection) -> MoveOutcome {
-        guard let window = controller.focusedWindow() else { return .noFocusedWindow }
+        // 注意：不在这里检查辅助功能权限。
+        // 本类保持为不依赖系统权限的纯逻辑，便于单元测试；
+        // 权限检查在 AppState 层做。
+        guard let window = controller.focusedWindow() else {
+            Log.ax.error("没有聚焦窗口")
+            return .noFocusedWindow
+        }
 
         let displays = DisplayGeometry.ordered(displaysProvider())
-        guard displays.count > 1 else { return .singleDisplay }
+        guard displays.count > 1 else {
+            Log.core.error("只有一块屏幕")
+            return .singleDisplay
+        }
 
         let currentIndex = DisplayGeometry.current(for: window.frame, in: displays)
             .flatMap { displays.firstIndex(of: $0) } ?? 0
@@ -44,7 +53,11 @@ final class ScreenNavigator {
         let source = DisplayGeometry.current(for: currentFrame, in: displays) ?? target
         let mapped = DisplayGeometry.mappedFrame(of: currentFrame, from: source, to: target)
 
-        guard controller.setPosition(window, to: mapped) else { return .failed }
+        guard controller.setPosition(window, to: mapped) else {
+            Log.ax.error("写入窗口位置失败")
+            return .failed
+        }
+        Log.core.notice("已移动到 \(target.name, privacy: .public)，新位置 x=\(mapped.minX) y=\(mapped.minY)")
         return .moved(displayName: target.name)
     }
 }

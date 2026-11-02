@@ -57,7 +57,9 @@ for stale in "$HOME"/Library/Developer/Xcode/DerivedData/DisplayHop-*/Build/Prod
 done
 "$LSR" -f "$DEST" 2>/dev/null || true
 
-# 清掉旧权限条目，避免列表里堆一堆失效的重复项
+# 清掉旧权限条目，避免列表里堆一堆失效的重复项。
+# 注意：ad-hoc 签名每次重新构建都会变，系统会当成新 App，
+# 所以重装后必须重新授权一次（这也是 macOS 对未公证 App 的固有行为）。
 echo "==> 重置辅助功能授权记录（需要重新勾选一次）"
 tccutil reset Accessibility "$BUNDLE_ID" 2>/dev/null || true
 
@@ -65,4 +67,7 @@ echo "==> 启动"
 open "$DEST"
 
 echo
-echo "完成。请在「系统设置 → 隐私与安全性 → 辅助功能」中勾选屏跃。"
+echo "完成。"
+echo "  1. 在「系统设置 → 隐私与安全性 → 辅助功能」中勾选「屏跃」"
+echo "  2. 首次打开若被 Gatekeeper 拦截，右键点击 App → 打开，或执行："
+echo "     xattr -dr com.apple.quarantine \"$DEST\""

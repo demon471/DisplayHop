@@ -1,121 +1,416 @@
 {
-  "sourceLanguage" : "zh-Hans",
-  "strings" : {
-    "菜单栏图标已隐藏" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Menu Bar Icon Hidden" } }
+  "sourceLanguage": "zh-Hans",
+  "strings": {
+    "菜单栏图标已隐藏": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menu Bar Icon Hidden"
+          }
+        }
       }
     },
-    "屏跃仍在后台运行，全局快捷键可正常使用。\n你可以重新显示菜单栏图标，或退出 App。" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "DisplayHop is still running in the background and global shortcuts keep working.\nYou can show the menu bar icon again, or quit the app." } }
+    "屏跃仍在后台运行，全局快捷键可正常使用。\n你可以重新显示菜单栏图标，或退出 App。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DisplayHop is still running in the background and global shortcuts keep working.\nYou can show the menu bar icon again, or quit the app."
+          }
+        }
       }
     },
-    "显示菜单栏图标" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Show Menu Bar Icon" } }
+    "显示菜单栏图标": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show Menu Bar Icon"
+          }
+        }
       }
     },
-    "退出" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Quit" } }
+    "退出": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quit"
+          }
+        }
       }
     },
-    "移动到下一屏" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Move to Next Display" } }
+    "移动到下一屏": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move to Next Display"
+          }
+        }
       }
     },
-    "移动到上一屏" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Move to Previous Display" } }
+    "移动到上一屏": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move to Previous Display"
+          }
+        }
       }
     },
-    "设置…" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Settings…" } }
+    "设置…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings…"
+          }
+        }
       }
     },
-    "检查辅助功能权限…" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Check Accessibility Permission…" } }
+    "检查辅助功能权限…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check Accessibility Permission…"
+          }
+        }
       }
     },
-    "退出屏跃" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Quit DisplayHop" } }
+    "退出屏跃": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quit DisplayHop"
+          }
+        }
       }
     },
-    "设置" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Settings" } }
+    "设置": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings"
+          }
+        }
       }
     },
-    "快捷键" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Shortcuts" } }
+    "快捷键": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shortcuts"
+          }
+        }
       }
     },
-    "通用" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "General" } }
+    "通用": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "General"
+          }
+        }
       }
     },
-    "窗口跨屏移动" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Move Window Across Displays" } }
+    "窗口跨屏移动": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move Window Across Displays"
+          }
+        }
       }
     },
-    "移动的是当前聚焦的窗口，并保持其在屏幕中的相对位置。全屏窗口会先退出全屏再移动。" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Moves the focused window and keeps its relative position on screen. Fullscreen windows exit fullscreen before moving." } }
+    "移动的是当前聚焦的窗口，并保持其在屏幕中的相对位置。全屏窗口会先退出全屏再移动。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moves the focused window and keeps its relative position on screen. Fullscreen windows exit fullscreen before moving."
+          }
+        }
       }
     },
-    "图标已隐藏。重新打开屏跃时会自动弹出本设置窗口，可在这里恢复显示。" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Icon hidden. Reopen DisplayHop to bring up this settings window and re-enable it here." } }
+    "图标已隐藏。重新打开屏跃时会自动弹出本设置窗口，可在这里恢复显示。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Icon hidden. Reopen DisplayHop to bring up this settings window and re-enable it here."
+          }
+        }
       }
     },
-    "登录时启动屏跃" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Launch DisplayHop at Login" } }
+    "登录时启动屏跃": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Launch DisplayHop at Login"
+          }
+        }
       }
     },
-    "启动" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Startup" } }
+    "启动": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Startup"
+          }
+        }
       }
     },
-    "权限" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Permissions" } }
+    "权限": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permissions"
+          }
+        }
       }
     },
-    "辅助功能" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Accessibility" } }
+    "辅助功能": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accessibility"
+          }
+        }
       }
     },
-    "已授权" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Granted" } }
+    "已授权": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Granted"
+          }
+        }
       }
     },
-    "前往系统设置" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open System Settings" } }
+    "前往系统设置": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open System Settings"
+          }
+        }
       }
     },
-    "需要辅助功能权限才能读取和移动其他应用的窗口。" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Accessibility permission is required to read and move windows of other apps." } }
+    "需要辅助功能权限才能读取和移动其他应用的窗口。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accessibility permission is required to read and move windows of other apps."
+          }
+        }
       }
     },
-    "菜单栏" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Menu Bar" } }
+    "菜单栏": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menu Bar"
+          }
+        }
+      }
+    },
+    "诊断": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagnostics"
+          }
+        }
+      }
+    },
+    "上次操作": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last Operation"
+          }
+        }
+      }
+    },
+    "结果": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Result"
+          }
+        }
+      }
+    },
+    "显示器": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Displays"
+          }
+        }
+      }
+    },
+    "数量": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Count"
+          }
+        }
+      }
+    },
+    "未授权": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not Granted"
+          }
+        }
+      }
+    },
+    "已移动到": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moved to"
+          }
+        }
+      }
+    },
+    "没有聚焦窗口": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No focused window"
+          }
+        }
+      }
+    },
+    "辅助功能未授权": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accessibility not granted"
+          }
+        }
+      }
+    },
+    "只有一块屏幕": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only one display"
+          }
+        }
+      }
+    },
+    "移动失败（AX 写入失败）": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move failed (AX write failed)"
+          }
+        }
+      }
+    },
+    "尚未执行": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not yet run"
+          }
+        }
+      }
+    },
+    "执行一次移动快捷键后，这里会显示结果。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Run a move shortcut and the result shows up here."
+          }
+        }
+      }
+    },
+    "辅助功能权限与「App 二进制」绑定。重新构建或重新安装后需要重新授权，否则快捷键会触发但窗口不会移动。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accessibility permission is bound to the app binary. After rebuilding or reinstalling, you must grant it again — otherwise the shortcut fires but the window won't move."
+          }
+        }
+      }
+    },
+    "需要辅助功能权限": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accessibility Permission Required"
+          }
+        }
+      }
+    },
+    "辅助功能权限用于读取和移动其他应用的窗口。授权后快捷键才能生效。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accessibility permission is used to read and move windows of other apps. Shortcuts only work once it is granted."
+          }
+        }
+      }
+    },
+    "打开系统设置": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open System Settings"
+          }
+        }
+      }
+    },
+    "稍后再说": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Later"
+          }
+        }
       }
     }
   },
-  "version" : "1.0"
+  "version": "1.0"
 }

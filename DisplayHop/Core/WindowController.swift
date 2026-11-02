@@ -33,6 +33,8 @@ enum MoveOutcome: Equatable {
     case moved(displayName: String)
     /// 当前没有可操作的聚焦窗口。
     case noFocusedWindow
+    /// 辅助功能权限未授予。
+    case notAuthorized
     /// 只连接了一块显示器。
     case singleDisplay
     /// AX 写入失败（窗口不可移动等）。

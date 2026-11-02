@@ -17,9 +17,10 @@ APP_PATH="${1:?用法: make_dmg.sh <app 路径> <输出目录> [版本号]}"
 OUTPUT_DIR="${2:?用法: make_dmg.sh <app 路径> <输出目录> [版本号]}"
 VERSION="${3:-1.0.0}"
 
-APP_NAME="$(basename "$APP_PATH" .app)"
-VOLUME_NAME="屏跃 ${VERSION}"
-DMG_NAME="${APP_NAME}-${VERSION}-universal.dmg"
+# 包名。Finder 显示的是文件名而不是 CFBundleDisplayName，
+# 所以想让用户看到「屏跃」，磁盘上的 .app 必须叫这个名字。
+# 内部可执行文件仍为 DisplayHop（由 CFBundleExecutable 指定）。
+BUNDLE_DISPLAY_NAME="屏跃"
 
 if [[ ! -d "$APP_PATH" ]]; then
     echo "✗ 找不到 App: $APP_PATH" >&2
@@ -27,6 +28,7 @@ if [[ ! -d "$APP_PATH" ]]; then
 fi
 
 mkdir -p "$OUTPUT_DIR"
+DMG_NAME="${BUNDLE_DISPLAY_NAME}-${VERSION}-universal.dmg"
 DMG_PATH="$OUTPUT_DIR/$DMG_NAME"
 
 STAGING="$(mktemp -d)"
@@ -39,14 +41,14 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# 1. 准备 DMG 内容
-cp -R "$APP_PATH" "$STAGING/"
+# 1. 准备 DMG 内容（包名改为中文）
+cp -R "$APP_PATH" "$STAGING/${BUNDLE_DISPLAY_NAME}.app"
 ln -s /Applications "$STAGING/Applications"
 
 # 2. 创建 DMG
 rm -f "$DMG_PATH"
 hdiutil create \
-    -volname "$VOLUME_NAME" \
+    -volname "${BUNDLE_DISPLAY_NAME} ${VERSION}" \
     -srcfolder "$STAGING" \
     -ov \
     -format UDZO \

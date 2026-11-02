@@ -30,11 +30,28 @@ struct DisplayHopApp: App {
 
         let appState = AppDelegate.sharedAppState
         KeyboardShortcuts.onKeyDown(for: .moveToNextDisplay) { [appState] in
+            Log.hotkey.notice("快捷键触发：移动到下一屏")
             appState.move(.next)
         }
         KeyboardShortcuts.onKeyDown(for: .moveToPreviousDisplay) { [appState] in
+            Log.hotkey.notice("快捷键触发：移动到上一屏")
             appState.move(.previous)
         }
+
+        Log.core.notice("启动完成，辅助功能授权：\(AccessibilityPermission.isGranted)")
+        Log.core.notice(
+            """
+            语言环境：preferred=\(Bundle.main.preferredLocalizations, privacy: .public) \
+            dev=\(Bundle.main.developmentLocalization ?? "nil", privacy: .public) \
+            available=\(Bundle.main.localizations.sorted().joined(separator: ","), privacy: .public)
+            """
+        )
+        Log.core.notice(
+            "界面文案抽查：「移动到下一屏」→「\(NSLocalizedString("移动到下一屏", comment: ""), privacy: .public)」"
+        )
+        Log.core.notice(
+            "显示名称：CFBundleDisplayName=\(Bundle.main.localizedInfoDictionary?["CFBundleDisplayName"] as? String ?? "nil", privacy: .public)"
+        )
     }
 }
 
@@ -51,6 +68,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let host = MenuBarHost(appState: Self.sharedAppState)
         host.start()
         menuBarHost = host
+
+        // 未授权时给出可操作的提示。
+        // 系统自带的 AX 授权弹窗不一定会自动消失，且不提供跳转按钮，
+        // 所以用自己的弹窗 + 直接打开系统设置面板。
+        if !AccessibilityPermission.isGranted {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                NSApp.activate(ignoringOtherApps: true)
+                let alert = NSAlert()
+                alert.messageText = NSLocalizedString("需要辅助功能权限", comment: "未授权提示标题")
+                alert.informativeText = NSLocalizedString(
+                    "辅助功能权限用于读取和移动其他应用的窗口。授权后快捷键才能生效。",
+                    comment: "未授权提示说明"
+                )
+                alert.addButton(withTitle: NSLocalizedString("打开系统设置", comment: ""))
+                alert.addButton(withTitle: NSLocalizedString("稍后再说", comment: ""))
+                if alert.runModal() == .alertFirstButtonReturn {
+                    AccessibilityPermission.openSystemPane()
+                }
+            }
+        }
 
         // 菜单栏图标被隐藏时，启动后给出可操作的恢复入口。
         // 此时用户既看不到菜单栏入口，也没有其他界面可以操作，

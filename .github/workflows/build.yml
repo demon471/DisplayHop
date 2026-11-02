@@ -25,12 +25,21 @@ jobs:
       - name: Install xcodegen
         run: brew install xcodegen
 
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+          echo "runner arch: $(uname -m)"
+
       - name: Resolve version
         id: version
         run: |
+          set -euo pipefail
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             TAG="${{ inputs.tag }}"
-            [ -z "$TAG" ] && TAG="v0.0.0-$(git rev-list --count HEAD)"
+            if [ -z "$TAG" ]; then
+              TAG="v0.0.0-$(git rev-list --count HEAD)"
+            fi
           else
             TAG="${GITHUB_REF#refs/tags/}"
           fi
@@ -38,6 +47,15 @@ jobs:
           ./tools/version.sh --github
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "resolved: tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Verify resolved version
+        run: |
+          set -euo pipefail
+          # 守门：版本号解析失败时立刻报错，而不是把空值传给 xcodebuild
+          test -n "${{ steps.version.outputs.marketing_version }}" || (echo "✗ marketing_version 解析失败" && exit 1)
+          test -n "${{ steps.version.outputs.build_number }}" || (echo "✗ build_number 解析失败" && exit 1)
+          echo "marketing_version=${{ steps.version.outputs.marketing_version }}"
+          echo "build_number=${{ steps.version.outputs.build_number }}"
 
       - name: Generate Xcode project
         run: xcodegen generate
@@ -107,6 +125,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # 同名 Release 已存在时先删掉（重新推送 tag 的场景）
+          gh release delete "${{ steps.version.outputs.tag }}" --yes --cleanup-tag 2>/dev/null || true
           gh release create "${{ steps.version.outputs.tag }}" \
             build/dmg/*.dmg \
             --title "屏跃 ${{ steps.version.outputs.marketing_version }}" \

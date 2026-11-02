@@ -9,7 +9,10 @@ options:
 packages:
   KeyboardShortcuts:
     url: https://github.com/sindresorhus/KeyboardShortcuts
-    from: 3.1.0
+    # 固定 2.3.0：它的 swift-tools-version 是 5.11，Xcode 16 / 26 都能解析。
+    # 3.x 全系要求 tools-version 6.2（需要 Xcode 26），
+    # GitHub 的 macos-15 runner（Xcode 16）无法解析，会导致 CI 失败。
+    exactVersion: 2.3.0
 
 settings:
   base:

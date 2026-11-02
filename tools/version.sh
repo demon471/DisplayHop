@@ -14,13 +14,21 @@
 #   预发布后缀（-beta.1）不进入版本号，避免 CFBundleShortVersionString 非数字段
 #   build_number 优先用 tag 里的构建号（v1.2.0-45 → 45），
 #   否则用 GITHUB_RUN_NUMBER，最后回退到 1
+#
+# 注意：--github 标志不限定位置（之前写成 $2 时，CI 里
+# "./tools/version.sh --github" 会把标志落到 $1，导致结果没写进 GITHUB_OUTPUT）
 
 set -euo pipefail
 
-TAG="${TAG:-${1:-}}"
-GITHUB_MODE="${2:-}"
+GITHUB_MODE=""
+for arg in "$@"; do
+    case "$arg" in
+        --github) GITHUB_MODE="--github" ;;
+    esac
+done
 
-if [[ -z "$TAG" ]]; then
+TAG="${TAG:-${1:-}}"
+if [[ -z "$TAG" || "$TAG" == "--github" ]]; then
     echo "用法: TAG=v1.2.0 $0 [--github]" >&2
     exit 1
 fi

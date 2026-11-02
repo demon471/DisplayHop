@@ -2,14 +2,15 @@ import KeyboardShortcuts
 import SwiftUI
 
 // 快捷键定义。默认值参照 Wins 的风格（Control + Option + 方向键）。
+// 注意：KeyboardShortcuts 2.x 的默认快捷键参数标签是 `default:`（3.x 改名为 `initial:`）。
 extension KeyboardShortcuts.Name {
     static let moveToNextDisplay = Self(
         "moveToNextDisplay",
-        initial: .init(.rightArrow, modifiers: [.control, .option])
+        default: .init(.rightArrow, modifiers: [.control, .option])
     )
     static let moveToPreviousDisplay = Self(
         "moveToPreviousDisplay",
-        initial: .init(.leftArrow, modifiers: [.control, .option])
+        default: .init(.leftArrow, modifiers: [.control, .option])
     )
 }
 

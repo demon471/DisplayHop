@@ -410,6 +410,56 @@
           }
         }
       }
+    },
+    "显示程序坞图标": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show Dock Icon"
+          }
+        }
+      }
+    },
+    "图标已全部隐藏": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All Icons Hidden"
+          }
+        }
+      }
+    },
+    "菜单栏图标和程序坞图标都已隐藏，屏跃仍在后台运行，全局快捷键可正常使用。\n你可以重新显示其中任意一个图标，或退出 App。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Both the menu bar and Dock icons are hidden. DisplayHop keeps running in the background and global shortcuts still work.\nYou can show either icon again, or quit the app."
+          }
+        }
+      }
+    },
+    "两个图标都已隐藏，屏跃将在后台运行，只能用快捷键操作。\n重新打开屏跃时会弹出提示，可在这里恢复。": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Both icons are hidden. DisplayHop runs in the background and can only be controlled with shortcuts.\nReopen DisplayHop to get a prompt, or restore them here."
+          }
+        }
+      }
+    },
+    "图标": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Icons"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

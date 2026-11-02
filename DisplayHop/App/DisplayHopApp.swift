@@ -58,11 +58,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         host.start()
         menuBarHost = host
 
-        // 菜单栏图标显隐 → 切换「菜单栏模式 / Dock 模式」。
-        // 隐藏菜单栏图标后如果不做任何处理，用户就完全找不到入口了。
+        // 菜单栏图标 / 程序坞图标 两个开关相互独立。
+        // 任意一个变化都要重新应用激活策略。
         preferencesCancellable = AppPreferences.shared.$showMenuBarIcon
+            .combineLatest(AppPreferences.shared.$showDockIcon)
             .receive(on: RunLoop.main)
-            .sink { [weak self] _ in
+            .sink { [weak self] _, _ in
                 self?.updatePresenceMode()
             }
         updatePresenceMode()
@@ -86,6 +87,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
         }
+
+        // 两个图标都关掉 → App 完全隐形，用户找不到任何入口。
+        // 启动时弹一次提示，提供恢复按钮。
+        if !AppPreferences.shared.hasVisibleEntryPoint {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                NSApp.activate(ignoringOtherApps: true)
+                let alert = NSAlert()
+                alert.messageText = NSLocalizedString("图标已全部隐藏", comment: "无入口提示标题")
+                alert.informativeText = NSLocalizedString(
+                    "菜单栏图标和程序坞图标都已隐藏，屏跃仍在后台运行，全局快捷键可正常使用。\n你可以重新显示其中任意一个图标，或退出 App。",
+                    comment: "无入口提示说明"
+                )
+                alert.addButton(withTitle: NSLocalizedString("显示菜单栏图标", comment: ""))
+                alert.addButton(withTitle: NSLocalizedString("显示程序坞图标", comment: ""))
+                alert.addButton(withTitle: NSLocalizedString("退出", comment: ""))
+                switch alert.runModal() {
+                case .alertFirstButtonReturn:
+                    AppPreferences.shared.showMenuBarIcon = true
+                case .alertSecondButtonReturn:
+                    AppPreferences.shared.showDockIcon = true
+                default:
+                    NSApp.terminate(nil)
+                }
+            }
+        }
     }
 
     /// 点击 Dock 图标时打开设置窗口（仅 Dock 模式下有 Dock 图标）。
@@ -96,18 +122,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - 呈现方式
 
-    /// 菜单栏图标显示 → 纯菜单栏应用（.accessory，无 Dock 图标）。
-    /// 菜单栏图标隐藏 → 切成普通应用（.regular，出现 Dock 图标），
-    /// 这样用户点 Dock 图标就能打开设置，不会失去入口。
+    /// 两个图标相互独立：
+    ///   菜单栏图标 → NSStatusItem.isVisible
+    ///   程序坞图标 → 激活策略（.regular 有图标 / .accessory 无图标）
+    ///
+    /// 组合起来：
+    ///   都显示   → 菜单栏图标 + Dock 图标
+    ///   只菜单栏 → .accessory，纯菜单栏应用
+    ///   只 Dock  → .regular，只有 Dock 图标
+    ///   都隐藏   → .accessory 且无状态栏项，App 完全隐形
     private func updatePresenceMode() {
-        let menuBarVisible = AppPreferences.shared.showMenuBarIcon
+        let showDock = AppPreferences.shared.showDockIcon
 
-        if menuBarVisible {
-            NSApp.setActivationPolicy(.accessory)
-            NSApp.mainMenu = nil
-        } else {
+        if showDock {
             NSApp.setActivationPolicy(.regular)
             NSApp.mainMenu = makeMainMenu()
+        } else {
+            NSApp.setActivationPolicy(.accessory)
+            NSApp.mainMenu = nil
         }
     }
 

@@ -123,12 +123,17 @@ private struct GeneralTab: View {
 
     var body: some View {
         Form {
-            Section("菜单栏") {
+            Section("图标") {
                 Toggle("显示菜单栏图标", isOn: $preferences.showMenuBarIcon)
-                if !preferences.showMenuBarIcon {
-                    Text("图标已隐藏。重新打开屏跃时会自动弹出本设置窗口，可在这里恢复显示。")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                Toggle("显示程序坞图标", isOn: $preferences.showDockIcon)
+
+                if !preferences.hasVisibleEntryPoint {
+                    Label(
+                        "两个图标都已隐藏，屏跃将在后台运行，只能用快捷键操作。\n重新打开屏跃时会弹出提示，可在这里恢复。",
+                        systemImage: "exclamationmark.triangle.fill"
+                    )
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
                 }
             }
 

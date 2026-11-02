@@ -140,3 +140,53 @@ Finder 等界面显示的是**文件名**，所以安装后的包名是 `屏跃.
 
 - 在对应工具里把 **屏跃** 拖到可见区域即可
 - 用 `swift tools/check_status_item.swift` 可以确认图标是「可见」还是「被隐藏 / 在屏幕外」
+
+## 发布流程
+
+CI 在**推送版本 tag** 时才构建，普通 push / PR 不触发：
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+`.github/workflows/build.yml` 会依次：装 xcodegen → 生成工程 → 交叉编译 universal（x86_64 + arm64）→
+校验 App 包/架构/版本号 → 打包 DMG → 上传 artifact → 创建 GitHub Release。
+
+也支持在 Actions 页面手动触发（`workflow_dispatch`），填入版本号即可出包。
+
+### 版本号规则
+
+版本号从 tag 提取（`tools/version.sh`）：
+
+| tag | CFBundleShortVersionString | CFBundleVersion |
+|---|---|---|
+| `v1.2.3` | 1.2.3 | GitHub run number |
+| `v2.0.0-beta.1` | 2.0.0 | GitHub run number |
+| `v0.1.0-45` | 0.1.0 | 45 |
+
+预发布后缀不会进入版本号（`CFBundleShortVersionString` 只接受数字段），
+`CFBundleVersion` 必须是正整数。
+
+### 为什么是 universal 而不是分架构
+
+App 是纯 Swift + 系统框架，无原生依赖，universal 编译零成本；
+macOS 通行做法就是发单一 universal 包（Rectangle / Magnet 都是），
+用户不用挑架构，Intel Mac 和 M 系列 Mac 都能直接跑。
+
+### 本地出包（不经过 CI）
+
+```bash
+./tools/make_dmg.sh /path/to/DisplayHop.app build/dmg 1.2.3
+```
+
+### 关于签名
+
+本项目无开发者证书，使用 ad-hoc 签名（"Sign to Run Locally"），因此**无法做 Apple 公证**。
+用户首次打开需右键→打开，或执行：
+
+```bash
+xattr -dr com.apple.quarantine /Applications/屏跃.app
+```
+
+如果以后有 Developer ID 证书，可在 workflow 中追加签名与 `notarytool` 公证步骤。

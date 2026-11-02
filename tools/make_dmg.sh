@@ -2,25 +2,26 @@
 # 把 .app 打包成 DMG。
 #
 # 用法：
-#   ./tools/make_dmg.sh <路径/to/屏跃.app> <输出目录> [版本号]
+#   ./tools/make_dmg.sh <路径/to/DisplayHop.app> <输出目录> <版本号> [架构]
 #
-# DMG 内结构：
-#   屏跃.app
-#   Applications -> /Applications   （拖拽安装的软链接）
+# 架构：arm64 | x64 | universal（默认 universal）
 #
-# 签名说明：本项目用 ad-hoc 签名，无法做 Apple 公证（notarization），
-# 用户首次打开需右键→打开，或执行 xattr -dr com.apple.quarantine /Applications/屏跃.app
+# 产物名用英文（DisplayHop-1.0.0-arm64.dmg）：
+# GitHub Release 的资源名会把非 ASCII 字符吞掉，中文名会变成「-1.0.0-arm64.dmg」。
+#
+# DMG 内的 App 名保持中文「屏跃.app」，Finder 里显示的是文件名，
+# 菜单栏/Dock/关于面板显示的是本地化后的名字。
 
 set -euo pipefail
 
-APP_PATH="${1:?用法: make_dmg.sh <app 路径> <输出目录> [版本号]}"
-OUTPUT_DIR="${2:?用法: make_dmg.sh <app 路径> <输出目录> [版本号]}"
-VERSION="${3:-1.0.0}"
+APP_PATH="${1:?用法: make_dmg.sh <app 路径> <输出目录> <版本号> [架构]}"
+OUTPUT_DIR="${2:?用法: make_dmg.sh <app 路径> <输出目录> <版本号> [架构]}"
+VERSION="${3:?用法: make_dmg.sh <app 路径> <输出目录> <版本号> [架构]}"
+ARCH="${4:-universal}"
 
-# 包名。Finder 显示的是文件名而不是 CFBundleDisplayName，
-# 所以想让用户看到「屏跃」，磁盘上的 .app 必须叫这个名字。
-# 内部可执行文件仍为 DisplayHop（由 CFBundleExecutable 指定）。
+# 产物用英文名，DMG 卷名用英文；App 名保持中文。
 BUNDLE_DISPLAY_NAME="屏跃"
+ARTIFACT_BASE_NAME="DisplayHop"
 
 if [[ ! -d "$APP_PATH" ]]; then
     echo "✗ 找不到 App: $APP_PATH" >&2
@@ -28,12 +29,11 @@ if [[ ! -d "$APP_PATH" ]]; then
 fi
 
 mkdir -p "$OUTPUT_DIR"
-DMG_NAME="${BUNDLE_DISPLAY_NAME}-${VERSION}-universal.dmg"
+DMG_NAME="${ARTIFACT_BASE_NAME}-${VERSION}-${ARCH}.dmg"
 DMG_PATH="$OUTPUT_DIR/$DMG_NAME"
 
 STAGING="$(mktemp -d)"
 cleanup() {
-    # 卸载可能已挂载的卷
     if [[ -n "${MOUNT_DIR:-}" ]] && mount | grep -q "$MOUNT_DIR"; then
         hdiutil detach "$MOUNT_DIR" -quiet -force 2>/dev/null || true
     fi
@@ -41,14 +41,14 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# 1. 准备 DMG 内容（包名改为中文）
+# 1. 准备 DMG 内容
 cp -R "$APP_PATH" "$STAGING/${BUNDLE_DISPLAY_NAME}.app"
 ln -s /Applications "$STAGING/Applications"
 
-# 2. 创建 DMG
+# 2. 创建 DMG（卷名用英文，避免某些工具对中文卷名的兼容问题）
 rm -f "$DMG_PATH"
 hdiutil create \
-    -volname "${BUNDLE_DISPLAY_NAME} ${VERSION}" \
+    -volname "${ARTIFACT_BASE_NAME} ${VERSION}" \
     -srcfolder "$STAGING" \
     -ov \
     -format UDZO \

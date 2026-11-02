@@ -60,16 +60,16 @@ jobs:
       - name: Generate Xcode project
         run: xcodegen generate
 
-      - name: Build (universal)
+      # macos-15 runner 是 arm64，但 Xcode 自带 x86_64 SDK，可直接交叉编译。
+      # 注意：不能同时用 -arch（会与 destination 冲突），要用 ARCHS=。
+      - name: Build (arm64)
         run: |
-          # Universal 构建用 ARCHS= 指定（不能同时用 -arch，那会与 destination 冲突）。
-          # macos-15 runner 是 arm64，但 Xcode 自带 x86_64 SDK，可直接交叉编译。
           xcodebuild \
             -project DisplayHop.xcodeproj \
             -scheme DisplayHop \
             -configuration Release \
             -destination 'platform=macOS' \
-            ARCHS="x86_64 arm64" \
+            ARCHS="arm64" \
             ONLY_ACTIVE_ARCH=NO \
             MARKETING_VERSION="${{ steps.version.outputs.marketing_version }}" \
             CURRENT_PROJECT_VERSION="${{ steps.version.outputs.build_number }}" \
@@ -78,21 +78,52 @@ jobs:
             CODE_SIGN_IDENTITY="-" \
             CODE_SIGN_STYLE=Manual \
             DEVELOPMENT_TEAM="" \
-            -derivedDataPath build/DerivedData
+            -derivedDataPath build/DerivedData-arm64
+
+      - name: Build (x64)
+        run: |
+          xcodebuild \
+            -project DisplayHop.xcodeproj \
+            -scheme DisplayHop \
+            -configuration Release \
+            -destination 'platform=macOS' \
+            ARCHS="x86_64" \
+            ONLY_ACTIVE_ARCH=NO \
+            MARKETING_VERSION="${{ steps.version.outputs.marketing_version }}" \
+            CURRENT_PROJECT_VERSION="${{ steps.version.outputs.build_number }}" \
+            build \
+            CODE_SIGNING_ALLOWED=YES \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM="" \
+            -derivedDataPath build/DerivedData-x64
 
       - name: Verify build artifacts
         run: |
           # 校验逻辑放在 tools/verify_build.sh，本地与 CI 跑同一份代码
           ./tools/verify_build.sh \
-            "build/DerivedData/Build/Products/Release/DisplayHop.app" \
-            "${{ steps.version.outputs.marketing_version }}"
+            "build/DerivedData-arm64/Build/Products/Release/DisplayHop.app" \
+            "${{ steps.version.outputs.marketing_version }}" \
+            arm64
+          ./tools/verify_build.sh \
+            "build/DerivedData-x64/Build/Products/Release/DisplayHop.app" \
+            "${{ steps.version.outputs.marketing_version }}" \
+            x86_64
 
-      - name: Package DMG
+      - name: Package DMGs
         run: |
+          # 产物名用英文：GitHub Release 会把资源名里的非 ASCII 字符整个吞掉，
+          # 中文名会变成「-1.0.0-arm64.dmg」这种缺头缺尾的名字。
           ./tools/make_dmg.sh \
-            "build/DerivedData/Build/Products/Release/DisplayHop.app" \
+            "build/DerivedData-arm64/Build/Products/Release/DisplayHop.app" \
             "build/dmg" \
-            "${{ steps.version.outputs.marketing_version }}"
+            "${{ steps.version.outputs.marketing_version }}" \
+            arm64
+          ./tools/make_dmg.sh \
+            "build/DerivedData-x64/Build/Products/Release/DisplayHop.app" \
+            "build/dmg" \
+            "${{ steps.version.outputs.marketing_version }}" \
+            x64
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -104,10 +135,43 @@ jobs:
       - name: Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.marketing_version }}
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
+          cat > release-notes.md <<'EOF'
+          ## 下载
+
+          | 文件 | 适用机型 |
+          |---|---|
+          | `DisplayHop-VERSION-arm64.dmg` | Apple 芯片（M1/M2/M3/M4/M5，2020 年后的 Mac） |
+          | `DisplayHop-VERSION-x64.dmg` | Intel 芯片 Mac |
+
+          不确定自己是哪种？点左上角  → 关于本机，看「芯片」那一行。
+
+          ## 安装
+
+          1. 打开 DMG，把「屏跃」拖进「应用程序」
+          2. 首次打开若被拦截：右键点击 App → 打开，或执行
+             `xattr -dr com.apple.quarantine "/Applications/屏跃.app"`
+          3. 在「系统设置 → 隐私与安全性 → 辅助功能」里勾选「屏跃」
+             （不勾选的话快捷键能触发，但窗口不会移动）
+
+          ## 默认快捷键
+
+          | 操作 | 快捷键 |
+          |---|---|
+          | 移动到下一屏 | `⌃⌥→` |
+          | 移动到上一屏 | `⌃⌥←` |
+
+          可在设置里自定义。
+
+          > 本项目未做 Apple 公证（没有开发者证书），首次打开需要右键→打开。
+          EOF
+          sed -i '' "s/VERSION/$VERSION/g" release-notes.md 2>/dev/null || sed -i "s/VERSION/$VERSION/g" release-notes.md
+
           # 同名 Release 已存在时先删掉（重新推送 tag 的场景）
-          gh release delete "${{ steps.version.outputs.tag }}" --yes --cleanup-tag 2>/dev/null || true
-          gh release create "${{ steps.version.outputs.tag }}" \
+          gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
+          gh release create "$TAG" \
             build/dmg/*.dmg \
-            --title "屏跃 ${{ steps.version.outputs.marketing_version }}" \
-            --generate-notes
+            --title "屏跃 $VERSION" \
+            --notes-file release-notes.md

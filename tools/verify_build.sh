@@ -2,12 +2,14 @@
 # 校验构建产物。CI（.github/workflows/build.yml）和本地都调用这一个脚本，
 # 避免两边各写一份、路径写法不一致导致 CI 假失败。
 #
-# 用法：./tools/verify_build.sh [App 路径]
+# 用法：./tools/verify_build.sh [App 路径] [期望版本号] [期望架构]
+# 期望架构：arm64 | x86_64 | universal（默认不校验具体架构）
 
 set -euo pipefail
 
 APP="${1:-build/DerivedData/Build/Products/Release/DisplayHop.app}"
 EXPECTED_VERSION="${2:-}"
+EXPECTED_ARCH="${3:-}"
 
 fail() {
     echo "✗ $1" >&2
@@ -28,13 +30,28 @@ echo "==> 校验 universal 架构"
 BIN="$APP/Contents/MacOS/DisplayHop"
 ARCHS=$(lipo -archs "$BIN")
 echo "  architectures: $ARCHS"
-echo "$ARCHS" | grep -q x86_64 || fail "缺少 x86_64 slice"
-echo "$ARCHS" | grep -q arm64  || fail "缺少 arm64 slice"
-# 确认是真正的 fat 二进制（而不是单架构）。
-# 注意：lipo -detailed_info 输出的是小写 "architecture x86_64"，
-# 用 file 判定 "universal binary" 更可靠。
-file "$BIN" | grep -q "universal binary" || fail "不是 universal（fat）二进制: $(file "$BIN")"
-echo "✓ universal binary OK"
+case "$EXPECTED_ARCH" in
+    arm64)
+        echo "$ARCHS" | grep -qx "arm64" || fail "期望纯 arm64 包，实际: $ARCHS"
+        echo "✓ arm64 OK"
+        ;;
+    x86_64)
+        echo "$ARCHS" | grep -qx "x86_64" || fail "期望纯 x86_64 包，实际: $ARCHS"
+        echo "✓ x86_64 OK"
+        ;;
+    universal)
+        echo "$ARCHS" | grep -q x86_64 || fail "缺少 x86_64 slice"
+        echo "$ARCHS" | grep -q arm64  || fail "缺少 arm64 slice"
+        # 确认是真正的 fat 二进制（而不是单架构）。
+        # 注意：lipo -detailed_info 输出的是小写 "architecture x86_64"，
+        # 用 file 判定 "universal binary" 更可靠。
+        file "$BIN" | grep -q "universal binary" || fail "不是 universal（fat）二进制: $(file "$BIN")"
+        echo "✓ universal binary OK"
+        ;;
+    *)
+        echo "  （未指定期望架构，跳过架构校验）"
+        ;;
+esac
 
 echo "==> 校验版本号"
 # 先确认键存在（Xcode 在版本号为空时会静默删除这两个键）

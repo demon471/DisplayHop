@@ -151,8 +151,21 @@ git tag v1.0.0
 git push origin v1.0.0
 ```
 
-`.github/workflows/build.yml` 会依次：装 xcodegen → 生成工程 → 交叉编译 universal（x86_64 + arm64）→
-校验 App 包/架构/版本号 → 打包 DMG → 上传 artifact → 创建 GitHub Release。
+`.github/workflows/build.yml` 会依次：装 xcodegen → 生成工程 → 分别交叉编译 arm64 和 x86_64 →
+校验 App 包/架构/版本号 → 打包两个 DMG → 上传 artifact → 创建 GitHub Release。
+
+### 产物
+
+| 文件 | 适用机型 |
+|---|---|
+| `DisplayHop-1.0.0-arm64.dmg` | Apple 芯片（M1 及以后） |
+| `DisplayHop-1.0.0-x64.dmg` | Intel 芯片 Mac |
+
+> **产物名必须用英文**：GitHub Release 会把资源名里的非 ASCII 字符整个吞掉，
+> 中文名会变成 `-1.0.0-arm64.dmg` 这种缺头缺尾的名字。
+
+> DMG **内部**的 App 仍叫「屏跃.app」（Finder 显示的是文件名），
+> 而菜单栏、Dock、关于面板显示的是本地化后的名字（中文系统显示「屏跃」）。
 
 也支持在 Actions 页面手动触发（`workflow_dispatch`），填入版本号即可出包。
 
@@ -178,7 +191,15 @@ macOS 通行做法就是发单一 universal 包（Rectangle / Magnet 都是）�
 ### 本地出包（不经过 CI）
 
 ```bash
-./tools/make_dmg.sh /path/to/DisplayHop.app build/dmg 1.2.3
+# 单架构
+./tools/make_dmg.sh build/DerivedData-arm64/Build/Products/Release/DisplayHop.app build/dmg 1.2.3 arm64
+./tools/make_dmg.sh build/DerivedData-x64/Build/Products/Release/DisplayHop.app   build/dmg 1.2.3 x64
+
+# 或 universal（两个架构合一）
+xcodebuild -project DisplayHop.xcodeproj -scheme DisplayHop -configuration Release \
+  -destination 'platform=macOS' ARCHS="x86_64 arm64" ONLY_ACTIVE_ARCH=NO \
+  -derivedDataPath build/DerivedData build
+./tools/make_dmg.sh build/DerivedData/Build/Products/Release/DisplayHop.app build/dmg 1.2.3 universal
 ```
 
 ### 关于签名

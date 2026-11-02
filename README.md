@@ -190,3 +190,49 @@ xattr -dr com.apple.quarantine /Applications/屏跃.app
 ```
 
 如果以后有 Developer ID 证书，可在 workflow 中追加签名与 `notarytool` 公证步骤。
+
+## 排查手册
+
+App 写入了统一日志，可直接查看：
+
+```bash
+log show --predicate 'subsystem == "com.johnbebee.DisplayHop"' --last 5m --style compact
+```
+
+设置页的「诊断」标签会实时显示：辅助功能权限状态、当前快捷键、上次操作结果、显示器列表。
+
+### 快捷键按了没反应
+
+按日志分类：
+
+| 日志内容 | 原因 | 处理 |
+|---|---|---|
+| `辅助功能未授权，无法读取窗口` | 快捷键触发了，但 AX 被拒 | 系统设置 → 隐私与安全性 → 辅助功能，重新勾选屏跃 |
+| 没有任何 hotkey 日志 | 快捷键没注册上 | 检查设置页「诊断」里的快捷键是否为空；可能与其他 App 冲突，换一组 |
+| `没有聚焦窗口` | 当前没有可移动的窗口 | 先点一下目标窗口 |
+
+### 辅助功能权限反复失效
+
+**这是 ad-hoc 签名的固有问题，不是 bug。**
+TCC 把辅助功能授权绑定到 App 的代码签名，而 ad-hoc 签名每次重新构建都会变，
+系统会当成一个新 App，旧授权随之失效。
+
+- 日常使用：装到 `/Applications` 后不再重新构建，授权一次即可长期有效
+- 开发期：`./tools/install.sh` 会自动 `tccutil reset` 清掉旧条目，重装后重新勾选一次
+- 彻底解决：申请 Apple Developer ID 证书并公证（签名稳定，授权不会失效）
+
+### 菜单栏看不到图标
+
+用工具确认（App 本地化后进程名是「屏跃」，脚本已按 bundle id 自动识别）：
+
+```bash
+swift tools/check_status_item.swift
+```
+
+输出「被隐藏 / 在屏幕外」说明被 Barbee / Ice / Hidden Bar 之类的工具收进了隐藏区段，
+在对应工具里拖回可见区域即可。
+
+### 名字显示不对
+
+- Finder 显示的是 **.app 文件名**，不是 CFBundleDisplayName → 打包脚本已把包名设为「屏跃.app」
+- 英文系统下会显示 `DisplayHop.app`（由 `InfoPlist.xcstrings` 控制）

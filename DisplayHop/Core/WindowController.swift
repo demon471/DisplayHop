@@ -5,6 +5,10 @@ import ApplicationServices
 //
 // ScreenNavigator 的移动逻辑只依赖 WindowControlling 协议，
 // AX 实现需要辅助功能权限，单元测试中用 Mock 替换。
+//
+// 性能：AX 的每次属性读取都是一次跨进程 XPC 往返（约 0.1~1ms）。
+// 所以这里尽量少读属性：标题等移动用不到的信息不取，
+// 同一个窗口复用同一个 AXUIElement，避免重复查询聚焦窗口。
 
 /// 当前聚焦窗口的快照。`backing` 持有 AX 元素本体，
 /// 由 AX 实现用于后续写入操作。
@@ -12,14 +16,12 @@ struct FocusedWindow: Equatable {
     var frame: WindowFrame
     var isMinimized: Bool
     var isFullScreen: Bool
-    var title: String?
     var backing: AnyObject?
 
     static func == (lhs: FocusedWindow, rhs: FocusedWindow) -> Bool {
         lhs.frame == rhs.frame
             && lhs.isMinimized == rhs.isMinimized
             && lhs.isFullScreen == rhs.isFullScreen
-            && lhs.title == rhs.title
     }
 }
 
@@ -43,12 +45,26 @@ enum MoveOutcome: Equatable {
 
 protocol WindowControlling {
     func focusedWindow() -> FocusedWindow?
+
+    /// 只重新读取位置和尺寸（复用已有 AX 元素，2 次 XPC）。
+    /// 退出全屏/还原之后窗口尺寸会变，需要重新读。
+    func refreshFrame(_ window: FocusedWindow) -> WindowFrame?
+
     @discardableResult
     func setMinimized(_ window: FocusedWindow, to minimized: Bool) -> Bool
     @discardableResult
     func setFullScreen(_ window: FocusedWindow, to fullScreen: Bool) -> Bool
     @discardableResult
     func setPosition(_ window: FocusedWindow, to frame: WindowFrame) -> Bool
+
+    /// 等待窗口退出全屏。AX 写入是异步生效的，
+    /// 不等的话读到的还是全屏尺寸，移动位置会算错。
+    func waitForFullScreenExit(_ window: FocusedWindow) async
+}
+
+extension WindowControlling {
+    func refreshFrame(_ window: FocusedWindow) -> WindowFrame? { nil }
+    func waitForFullScreenExit(_ window: FocusedWindow) async {}
 }
 
 // MARK: - AX 实现
@@ -73,9 +89,13 @@ final class AXWindowController: WindowControlling {
             frame: frame,
             isMinimized: Self.boolValue(element, kAXMinimizedAttribute) ?? false,
             isFullScreen: Self.boolValue(element, Self.fullScreenAttribute) ?? false,
-            title: Self.stringValue(element, kAXTitleAttribute),
             backing: element
         )
+    }
+
+    func refreshFrame(_ window: FocusedWindow) -> WindowFrame? {
+        guard let backing = window.backing else { return nil }
+        return Self.frame(of: backing as! AXUIElement)
     }
 
     func setMinimized(_ window: FocusedWindow, to minimized: Bool) -> Bool {
@@ -92,6 +112,19 @@ final class AXWindowController: WindowControlling {
         var point = CGPoint(x: frame.minX, y: frame.minY)
         guard let value = AXValueCreate(.cgPoint, &point) else { return false }
         return AXUIElementSetAttributeValue(element, kAXPositionAttribute as CFString, value) == .success
+    }
+
+    func waitForFullScreenExit(_ window: FocusedWindow) async {
+        guard let backing = window.backing else { return }
+        let element = backing as! AXUIElement
+        // AXFullScreen 变成 false 需要一点时间（系统动画 + 异步通知）。
+        // 最多等 600ms，超时就用现有 frame 继续，保证不会卡住。
+        for _ in 0..<30 {
+            if (Self.boolValue(element, Self.fullScreenAttribute) ?? false) == false {
+                return
+            }
+            try? await Task.sleep(for: .milliseconds(20))
+        }
     }
 
     // MARK: Private
@@ -149,13 +182,6 @@ final class AXWindowController: WindowControlling {
         let result = AXUIElementCopyAttributeValue(element, attribute as CFString, &value)
         guard result == .success, let value, let bool = value as? Bool else { return nil }
         return bool
-    }
-
-    private static func stringValue(_ element: AXUIElement, _ attribute: String) -> String? {
-        var value: CFTypeRef?
-        let result = AXUIElementCopyAttributeValue(element, attribute as CFString, &value)
-        guard result == .success, let value, let string = value as? String else { return nil }
-        return string
     }
 }
 

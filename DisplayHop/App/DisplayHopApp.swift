@@ -1,3 +1,4 @@
+import Combine
 import KeyboardShortcuts
 import SwiftUI
 
@@ -39,19 +40,6 @@ struct DisplayHopApp: App {
         }
 
         Log.core.notice("启动完成，辅助功能授权：\(AccessibilityPermission.isGranted)")
-        Log.core.notice(
-            """
-            语言环境：preferred=\(Bundle.main.preferredLocalizations, privacy: .public) \
-            dev=\(Bundle.main.developmentLocalization ?? "nil", privacy: .public) \
-            available=\(Bundle.main.localizations.sorted().joined(separator: ","), privacy: .public)
-            """
-        )
-        Log.core.notice(
-            "界面文案抽查：「移动到下一屏」→「\(NSLocalizedString("移动到下一屏", comment: ""), privacy: .public)」"
-        )
-        Log.core.notice(
-            "显示名称：CFBundleDisplayName=\(Bundle.main.localizedInfoDictionary?["CFBundleDisplayName"] as? String ?? "nil", privacy: .public)"
-        )
     }
 }
 
@@ -63,11 +51,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     static let sharedAppState = AppState()
 
     private var menuBarHost: MenuBarHost?
+    private var preferencesCancellable: AnyCancellable?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let host = MenuBarHost(appState: Self.sharedAppState)
         host.start()
         menuBarHost = host
+
+        // 菜单栏图标显隐 → 切换「菜单栏模式 / Dock 模式」。
+        // 隐藏菜单栏图标后如果不做任何处理，用户就完全找不到入口了。
+        preferencesCancellable = AppPreferences.shared.$showMenuBarIcon
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.updatePresenceMode()
+            }
+        updatePresenceMode()
 
         // 未授权时给出可操作的提示。
         // 系统自带的 AX 授权弹窗不一定会自动消失，且不提供跳转按钮，
@@ -88,26 +86,61 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
         }
+    }
 
-        // 菜单栏图标被隐藏时，启动后给出可操作的恢复入口。
-        // 此时用户既看不到菜单栏入口，也没有其他界面可以操作，
-        // 因此用 NSAlert（不依赖 SwiftUI 环境，启动时必定可用）作为兼容性最好的兜底。
-        guard !AppPreferences.shared.showMenuBarIcon else { return }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            NSApp.activate(ignoringOtherApps: true)
-            let alert = NSAlert()
-            alert.messageText = NSLocalizedString("菜单栏图标已隐藏", comment: "隐藏图标后启动的弹窗标题")
-            alert.informativeText = NSLocalizedString(
-                "屏跃仍在后台运行，全局快捷键可正常使用。\n你可以重新显示菜单栏图标，或退出 App。",
-                comment: "隐藏图标后启动的弹窗说明"
-            )
-            alert.addButton(withTitle: NSLocalizedString("显示菜单栏图标", comment: ""))
-            alert.addButton(withTitle: NSLocalizedString("退出", comment: ""))
-            if alert.runModal() == .alertFirstButtonReturn {
-                AppPreferences.shared.showMenuBarIcon = true
-            } else {
-                NSApp.terminate(nil)
-            }
+    /// 点击 Dock 图标时打开设置窗口（仅 Dock 模式下有 Dock 图标）。
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
+        SettingsWindowController.shared.show()
+        return true
+    }
+
+    // MARK: - 呈现方式
+
+    /// 菜单栏图标显示 → 纯菜单栏应用（.accessory，无 Dock 图标）。
+    /// 菜单栏图标隐藏 → 切成普通应用（.regular，出现 Dock 图标），
+    /// 这样用户点 Dock 图标就能打开设置，不会失去入口。
+    private func updatePresenceMode() {
+        let menuBarVisible = AppPreferences.shared.showMenuBarIcon
+
+        if menuBarVisible {
+            NSApp.setActivationPolicy(.accessory)
+            NSApp.mainMenu = nil
+        } else {
+            NSApp.setActivationPolicy(.regular)
+            NSApp.mainMenu = makeMainMenu()
         }
+    }
+
+    /// Dock 模式下的主菜单（.regular 的应用需要主菜单，否则没有应用菜单）。
+    private func makeMainMenu() -> NSMenu {
+        let mainMenu = NSMenu()
+
+        let appMenuItem = NSMenuItem()
+        let appMenu = NSMenu()
+        appMenu.addItem(
+            withTitle: NSLocalizedString("关于屏跃", comment: ""),
+            action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)),
+            keyEquivalent: ""
+        )
+        appMenu.addItem(.separator())
+        appMenu.addItem(
+            withTitle: NSLocalizedString("设置…", comment: ""),
+            action: #selector(openSettingsFromMenu),
+            keyEquivalent: ","
+        )
+        appMenu.addItem(.separator())
+        appMenu.addItem(
+            withTitle: NSLocalizedString("退出屏跃", comment: ""),
+            action: #selector(NSApplication.terminate),
+            keyEquivalent: "q"
+        )
+        appMenuItem.submenu = appMenu
+        mainMenu.addItem(appMenuItem)
+
+        return mainMenu
+    }
+
+    @objc private func openSettingsFromMenu() {
+        SettingsWindowController.shared.show()
     }
 }

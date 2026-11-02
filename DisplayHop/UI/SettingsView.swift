@@ -22,7 +22,6 @@ struct SettingsView: View {
                 switch selectedTab {
                 case .shortcuts: ShortcutsTab()
                 case .general: GeneralTab()
-                case .diagnostics: DiagnosticsTab()
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -36,7 +35,6 @@ struct SettingsView: View {
 enum SettingsTab: String, CaseIterable, Identifiable {
     case shortcuts
     case general
-    case diagnostics
 
     var id: String { rawValue }
 
@@ -44,7 +42,6 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         switch self {
         case .shortcuts: NSLocalizedString("快捷键", comment: "设置页签")
         case .general: NSLocalizedString("通用", comment: "设置页签")
-        case .diagnostics: NSLocalizedString("诊断", comment: "设置页签")
         }
     }
 
@@ -52,7 +49,6 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         switch self {
         case .shortcuts: "keyboard"
         case .general: "gearshape"
-        case .diagnostics: "stethoscope"
         }
     }
 }
@@ -184,84 +180,5 @@ private struct GeneralTab: View {
                 launchAtLogin = LaunchAtLogin.isEnabled
             }
         )
-    }
-}
-
-// MARK: 诊断
-
-private struct DiagnosticsTab: View {
-    @ObservedObject private var appState = AppDelegate.sharedAppState
-    @State private var accessibilityGranted = AccessibilityPermission.isGranted
-    @State private var refreshTimer: Timer?
-
-    var body: some View {
-        Form {
-            Section("权限") {
-                LabeledContent("辅助功能") {
-                    if accessibilityGranted {
-                        Label("已授权", systemImage: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
-                            .labelStyle(.titleAndIcon)
-                    } else {
-                        Label("未授权", systemImage: "xmark.circle.fill")
-                            .foregroundStyle(.red)
-                            .labelStyle(.titleAndIcon)
-                    }
-                }
-                Text("辅助功能权限与「App 二进制」绑定。重新构建或重新安装后需要重新授权，否则快捷键会触发但窗口不会移动。")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section("快捷键") {
-                LabeledContent("移动到下一屏") {
-                    Text(KeyboardShortcuts.Name.moveToNextDisplay.shortcut?.description ?? "未设置")
-                        .font(.body.monospaced())
-                }
-                LabeledContent("移动到上一屏") {
-                    Text(KeyboardShortcuts.Name.moveToPreviousDisplay.shortcut?.description ?? "未设置")
-                        .font(.body.monospaced())
-                }
-            }
-
-            Section("上次操作") {
-                LabeledContent("结果") {
-                    Text(appState.lastOutcome.map(Self.describe) ?? "尚未执行")
-                        .foregroundStyle(appState.lastOutcome == .moved(displayName: "") ? Color.green : Color.secondary)
-                }
-                Text("执行一次移动快捷键后，这里会显示结果。")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-
-            Section("显示器") {
-                LabeledContent("数量") { Text("\(NSScreen.screens.count)") }
-                ForEach(Array(NSScreen.screens.enumerated()), id: \.offset) { index, screen in
-                    LabeledContent("屏幕 \(index + 1)") {
-                        Text("\(screen.localizedName)  \(Int(screen.frame.width))×\(Int(screen.frame.height))")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-        }
-        .formStyle(.grouped)
-        .onAppear {
-            accessibilityGranted = AccessibilityPermission.isGranted
-            refreshTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { _ in
-                Task { @MainActor in accessibilityGranted = AccessibilityPermission.isGranted }
-            }
-        }
-        .onDisappear { refreshTimer?.invalidate() }
-    }
-
-    private static func describe(_ outcome: MoveOutcome) -> String {
-        switch outcome {
-        case .moved(let displayName): return "已移动到 \(displayName)"
-        case .noFocusedWindow: return "没有聚焦窗口"
-        case .notAuthorized: return "辅助功能未授权"
-        case .singleDisplay: return "只有一块屏幕"
-        case .failed: return "移动失败（AX 写入失败）"
-        }
     }
 }

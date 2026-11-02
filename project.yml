@@ -1,0 +1,69 @@
+name: DisplayHop
+options:
+  bundleIdPrefix: com.johnbebee
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+  developmentLanguage: zh-Hans
+
+packages:
+  KeyboardShortcuts:
+    url: https://github.com/sindresorhus/KeyboardShortcuts
+    from: 3.1.0
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    # 本项目无开发者证书，用 ad-hoc 签名（“Sign to Run Locally”）。
+    # 可直接分发，但用户首次打开需右键→打开，或清除隔离属性。
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGN_STYLE: Automatic
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+
+targets:
+  DisplayHop:
+    type: application
+    platform: macOS
+    sources:
+      - DisplayHop
+    dependencies:
+      - package: KeyboardShortcuts
+    settings:
+      base:
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        # 不设 ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME：
+        # 未指定时 App 自动跟随系统设置里的强调色（“外观 → 强调色”）。
+    info:
+      path: DisplayHop/Info.plist
+      properties:
+        CFBundleDisplayName: 屏跃
+        # 版本号由构建时注入（CI 从 tag 提取，见 tools/version.sh）
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSUIElement: true
+        LSApplicationCategoryType: public.app-category.utilities
+
+  DisplayHopTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - DisplayHopTests
+    dependencies:
+      - target: DisplayHop
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  DisplayHop:
+    build:
+      targets:
+        DisplayHop: all
+        DisplayHopTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - DisplayHopTests

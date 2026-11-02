@@ -1,0 +1,113 @@
+name: Build
+
+# 只在推送版本 tag 时构建（v1.0.0、v1.2.3 …）。
+# 普通 push / PR 不编译，避免每次提交都跑一遍 macOS 构建。
+on:
+  push:
+    tags: ["v*"]
+  # 手动触发，便于临时出包
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "版本号（如 v1.0.0），留空则用当前 SHA"
+        required: false
+        default: ""
+
+jobs:
+  build:
+    runs-on: macos-15
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Resolve version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ inputs.tag }}"
+            [ -z "$TAG" ] && TAG="v0.0.0-$(git rev-list --count HEAD)"
+          else
+            TAG="${GITHUB_REF#refs/tags/}"
+          fi
+          export TAG
+          ./tools/version.sh --github
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "resolved: tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build (universal)
+        run: |
+          # Universal 构建用 ARCHS= 指定（不能同时用 -arch，那会与 destination 冲突）。
+          # macos-15 runner 是 arm64，但 Xcode 自带 x86_64 SDK，可直接交叉编译。
+          xcodebuild \
+            -project DisplayHop.xcodeproj \
+            -scheme DisplayHop \
+            -configuration Release \
+            -destination 'platform=macOS' \
+            ARCHS="x86_64 arm64" \
+            ONLY_ACTIVE_ARCH=NO \
+            MARKETING_VERSION="${{ steps.version.outputs.marketing_version }}" \
+            CURRENT_PROJECT_VERSION="${{ steps.version.outputs.build_number }}" \
+            build \
+            CODE_SIGNING_ALLOWED=YES \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM="" \
+            -derivedDataPath build/DerivedData
+
+      - name: Verify app bundle
+        run: |
+          APP="build/DerivedData/Build/Products/Release/DisplayHop.app"
+          test -f "$APP/Info.plist" || (echo "Info.plist MISSING" && exit 1)
+          test -f "$APP/Contents/MacOS/DisplayHop" || (echo "Executable MISSING" && exit 1)
+          test -f "$APP/Contents/Resources/AppIcon.icns" || (echo "AppIcon MISSING" && exit 1)
+          echo "App bundle OK"
+
+      - name: Verify universal binary
+        run: |
+          BIN="build/DerivedData/Build/Products/Release/DisplayHop.app/Contents/MacOS/DisplayHop"
+          ARCHS=$(lipo -archs "$BIN")
+          echo "architectures: $ARCHS"
+          echo "$ARCHS" | grep -q x86_64 || (echo "x86_64 slice MISSING" && exit 1)
+          echo "$ARCHS" | grep -q arm64  || (echo "arm64 slice MISSING" && exit 1)
+          # 确认是真正的 universal（fat）二进制，而不是单架构
+          lipo -detailed_info "$BIN" | grep -q "Architecture: x86_64" || (echo "not a fat binary" && exit 1)
+          echo "Universal binary OK"
+
+      - name: Verify version
+        run: |
+          APP="build/DerivedData/Build/Products/Release/DisplayHop.app"
+          SHORT=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP/Contents/Info.plist")
+          BUILD=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$APP/Contents/Info.plist")
+          echo "version: $SHORT ($BUILD)"
+          test "$SHORT" = "${{ steps.version.outputs.marketing_version }}" || (echo "version mismatch" && exit 1)
+
+      - name: Package DMG
+        run: |
+          ./tools/make_dmg.sh \
+            "build/DerivedData/Build/Products/Release/DisplayHop.app" \
+            "build/dmg" \
+            "${{ steps.version.outputs.marketing_version }}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DisplayHop-${{ steps.version.outputs.tag }}
+          path: build/dmg/*.dmg
+          if-no-files-found: error
+
+      - name: Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.version.outputs.tag }}" \
+            build/dmg/*.dmg \
+            --title "屏跃 ${{ steps.version.outputs.marketing_version }}" \
+            --generate-notes

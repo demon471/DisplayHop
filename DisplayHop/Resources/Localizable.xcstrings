@@ -1,0 +1,121 @@
+{
+  "sourceLanguage" : "zh-Hans",
+  "strings" : {
+    "菜单栏图标已隐藏" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Menu Bar Icon Hidden" } }
+      }
+    },
+    "屏跃仍在后台运行，全局快捷键可正常使用。\n你可以重新显示菜单栏图标，或退出 App。" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "DisplayHop is still running in the background and global shortcuts keep working.\nYou can show the menu bar icon again, or quit the app." } }
+      }
+    },
+    "显示菜单栏图标" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Show Menu Bar Icon" } }
+      }
+    },
+    "退出" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Quit" } }
+      }
+    },
+    "移动到下一屏" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Move to Next Display" } }
+      }
+    },
+    "移动到上一屏" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Move to Previous Display" } }
+      }
+    },
+    "设置…" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Settings…" } }
+      }
+    },
+    "检查辅助功能权限…" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Check Accessibility Permission…" } }
+      }
+    },
+    "退出屏跃" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Quit DisplayHop" } }
+      }
+    },
+    "设置" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Settings" } }
+      }
+    },
+    "快捷键" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Shortcuts" } }
+      }
+    },
+    "通用" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "General" } }
+      }
+    },
+    "窗口跨屏移动" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Move Window Across Displays" } }
+      }
+    },
+    "移动的是当前聚焦的窗口，并保持其在屏幕中的相对位置。全屏窗口会先退出全屏再移动。" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Moves the focused window and keeps its relative position on screen. Fullscreen windows exit fullscreen before moving." } }
+      }
+    },
+    "图标已隐藏。重新打开屏跃时会自动弹出本设置窗口，可在这里恢复显示。" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Icon hidden. Reopen DisplayHop to bring up this settings window and re-enable it here." } }
+      }
+    },
+    "登录时启动屏跃" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Launch DisplayHop at Login" } }
+      }
+    },
+    "启动" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Startup" } }
+      }
+    },
+    "权限" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Permissions" } }
+      }
+    },
+    "辅助功能" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Accessibility" } }
+      }
+    },
+    "已授权" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Granted" } }
+      }
+    },
+    "前往系统设置" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open System Settings" } }
+      }
+    },
+    "需要辅助功能权限才能读取和移动其他应用的窗口。" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Accessibility permission is required to read and move windows of other apps." } }
+      }
+    },
+    "菜单栏" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Menu Bar" } }
+      }
+    }
+  },
+  "version" : "1.0"
+}

@@ -1,0 +1,142 @@
+# DisplayHop / 屏跃
+
+菜单栏窗口管理小工具：一键把当前聚焦的窗口移动到下一个/上一个显示器，类似 Wins。
+
+- 中文名：**屏跃**（系统语言为中文时显示，对应英文 DisplayHop）
+- **支持中英双语**：开发语言为 zh-Hans，通过 String Catalog（`Localizable.xcstrings`）提供英文翻译，
+  App 名称、菜单、设置、弹窗全部跟随系统语言
+
+## 功能
+
+- **移动到下一屏 / 上一屏**：全局快捷键，默认 `⌃⌥→` / `⌃⌥←`（Wins 风格）
+- **自定义快捷键**：设置窗口内录制，冲突检测，自动保存
+- **保持相对位置**：窗口跨屏后保持在源屏幕中的相对位置，并夹紧到目标屏幕可见区域（不会跑到菜单栏或 Dock 底下）
+- **边界处理**：全屏窗口先退出全屏、最小化窗口先还原、单屏时忽略、多屏按系统"显示器排列"方向导航并支持回绕
+- **菜单栏图标可隐藏**：设置 → 通用 → 关闭"显示菜单栏图标"；隐藏后下次启动会弹出恢复提示
+- **设置窗口置顶**：从菜单栏点击"设置…"时自动激活 App 并抢焦（菜单栏应用不会自动激活自身）
+- **登录时启动**：基于 SMAppService
+- **应用图标**：来自 macosicons.com，按 macOS 规范适配（80.5% squircle、透明四角、10 个尺寸）
+
+## 构建与运行
+
+```bash
+xcodegen generate          # 生成 DisplayHop.xcodeproj（项目定义见 project.yml）
+open DisplayHop.xcodeproj  # Xcode 中 Cmd+R 运行
+```
+
+命令行构建 + 测试：
+
+```bash
+xcodebuild -project DisplayHop.xcodeproj -scheme DisplayHop -destination 'platform=macOS' test
+```
+
+## 首次运行
+
+1. 启动后系统会弹出辅助功能权限引导（系统设置 > 隐私与安全性 > 辅助功能），勾选 DisplayHop
+2. 授权后如快捷键未生效，重新启动 App 一次
+
+## 项目结构
+
+```
+DisplayHop/
+├── DisplayHop/
+│   ├── App/
+│   │   ├── DisplayHopApp.swift        # 入口：AppDelegate + 快捷键注册 + 隐藏图标兜底
+│   │   ├── MenuBarHost.swift          # 菜单栏：NSStatusItem + NSMenu（含显隐）
+│   │   ├── SettingsWindowController.swift # 设置窗口：NSWindow + NSHostingView
+│   │   ├── AppState.swift             # 菜单动作与失败反馈（系统提示音）
+│   │   └── AppPreferences.swift       # 偏好设置（菜单栏图标显隐）
+│   ├── Core/
+│   │   ├── DisplayGeometry.swift      # 纯几何计算：屏幕排序/归属判定/坐标映射（可单测）
+│   │   ├── DisplayInfo+AppKit.swift   # NSScreen(左下原点) ↔ CG(左上原点) 坐标转换
+│   │   ├── WindowController.swift     # AX API 封装 + 辅助功能权限 + WindowControlling 协议
+│   │   ├── ScreenNavigator.swift      # 移动编排：聚焦窗口 → 定屏 → 映射 → 写回
+│   │   └── LaunchAtLogin.swift        # SMAppService 登录启动
+│   ├── Resources/
+│   │   ├── Assets.xcassets/           # AppIcon（10 个尺寸）+ AccentColor
+│   │   ├── Localizable.xcstrings      # 中英双语字符串目录
+│   │   └── InfoPlist.xcstrings        # App 名称本地化（屏跃 / DisplayHop）
+│   └── UI/
+│       └── SettingsView.swift         # 快捷键 / 通用 设置（TabView + Grouped Form）
+├── DisplayHopTests/
+│   ├── DisplayGeometryTests.swift     # 12 个几何测试
+│   └── ScreenNavigatorTests.swift     # 10 个移动编排测试（Mock AX）
+└── tools/
+    ├── install.sh                     # 构建 Release 并安装到 /Applications
+    ├── check_status_item.swift        # 检查状态栏项是否真的注册/可见
+    ├── gen_menubar_icons.swift        # 菜单栏图标候选对照表
+    ├── preview_icon_weight.swift      # 图标白色纯度对比
+    └── preview_menubar_rendering.swift # 渲染模式对比
+```
+
+## 技术说明
+
+- 窗口移动基于**辅助功能 API（AX API）**：`AXUIElementCopyAttributeValue` 读取 `kAXPositionAttribute`/`kAXSizeAttribute`，计算后写回 `kAXPositionAttribute`
+- 全局快捷键使用 [sindresorhus/KeyboardShortcuts](https://github.com/sindresorhus/KeyboardShortcuts)（v3，含录制控件与持久化）
+- 坐标系：AX 使用主屏幕左上角原点，AppKit 使用左下角原点，`DisplayInfo+AppKit.swift` 统一转换到 CG 空间后再做纯函数计算
+- 单元测试不依赖真实显示器与权限：几何计算为纯函数，AX 通过 `WindowControlling` 协议 Mock
+
+## 排查：菜单栏上看不到图标
+
+如果装了 Barbee / Ice / Hidden Bar 这类菜单栏管理工具，它们会把第三方图标移到屏幕外实现"隐藏"。
+本 App 的图标可能被自动归到隐藏区段，需要在那个工具里把它拖到可见区域。
+
+用下面的命令确认图标是否真的注册了（`onscreen=1` 表示当前可见）：
+
+```bash
+swift tools/check_status_item.swift
+```
+
+## 实现中避开的两个 macOS 坑
+
+### 1. `MenuBarExtra(isInserted:)` + Settings 会无限重绘
+
+最初用 SwiftUI 的 `MenuBarExtra(..., isInserted:)` 做图标显隐。点击「设置…」后主线程 100% 死循环，
+`sample` 采样栈为：
+
+```
+MenuBarExtraHost.requestUpdate → MenuBarExtraController.updateButton
+  → NSStatusBarButton.setImage → _adjustLength → 再次 requestUpdate …
+```
+
+结论：macOS 15 上 `isInserted` 绑定与 Settings 窗口组合会触发 SwiftUI 无限重绘。
+现改为 `NSStatusItem` + `NSMenu` 手动管理（`MenuBarHost`），显隐等价于 `statusItem.isVisible`。
+
+### 2. 设置窗口打不开
+
+SwiftUI `Settings` scene 的呈现依赖内部 action（`showSettingsWindow:`）。
+在没有 SwiftUI 菜单栏/responder 链的 NSStatusItem 环境下 `NSApp.sendAction` 找不到处理器，静默失败。
+现改为 `NSWindow` + `NSHostingView` 手动托管（`SettingsWindowController`），并显式 `NSApp.activate` 置顶。
+
+## 权限列表图标空白 / 反复要求授权
+
+两个独立原因，都在开发阶段才会遇到：
+
+1. **图标空白**：系统设置通过 LaunchServices 按 bundle id 查图标，
+   而 Xcode DerivedData 里的产物没有注册到 LaunchServices，只能显示通用白图标。
+   → 装到 `/Applications` 即解决（`tools/install.sh`）。
+2. **反复要求授权**：本项目无开发者证书，用 ad-hoc 签名，
+   每次重新构建签名都会变，系统当作新 App。
+   → 日常使用装到 `/Applications` 后不再重建，权限授一次长期有效。
+
+```bash
+./tools/install.sh     # 构建 Release → 安装 → 清理旧注册 → 重置授权 → 启动
+```
+
+安装后需在「系统设置 → 隐私与安全性 → 辅助功能」勾选一次**屏跃**。
+
+### 关于 App 名称的语言
+
+Finder 等界面显示的是**文件名**，所以安装后的包名是 `屏跃.app`（脚本会自动清理旧的 `DisplayHop.app`）。
+同时保留 `InfoPlist.xcstrings` 的本地化：英文系统下 Finder 会显示 `DisplayHop.app`。
+
+脚本还会注销 Xcode 构建产物在 LaunchServices 里的注册——
+否则系统会把这些副本当作额外的同名 App，权限列表里出现多条重复条目（图标为空白）。
+
+### 关于菜单栏图标被"藏起来"
+
+如果装了 Barbee / Ice / Hidden Bar 这类菜单栏管理工具，新出现的图标默认可能被归到隐藏区段，
+表现为"图标不见了"。它们通过把状态栏窗口移到屏幕外来实现隐藏，所以：
+
+- 在对应工具里把 **屏跃** 拖到可见区域即可
+- 用 `swift tools/check_status_item.swift` 可以确认图标是「可见」还是「被隐藏 / 在屏幕外」

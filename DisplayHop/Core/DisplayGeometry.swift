@@ -68,6 +68,48 @@ enum DisplayGeometry {
         return max(0, overlapX) * max(0, overlapY)
     }
 
+    /// 判断窗口是否处于「铺满整屏」状态。
+    ///
+    /// 系统「填充」动作会在四周留 8pt 边距，而本 App 要的是零边距，
+    /// 所以这里只用几何判断：窗口是否几乎贴满屏幕可见区。
+    /// 容忍度放宽到 45pt，覆盖系统填充的 8pt 以及外屏菜单栏保留区。
+    static func isFilled(
+        _ window: WindowFrame,
+        in display: DisplayInfo,
+        tolerance: Double = 45
+    ) -> Bool {
+        let visible = display.visibleFrame
+        guard visible.width > 0, visible.height > 0 else { return false }
+        return abs(window.width - visible.width) <= tolerance
+            && abs(window.height - visible.height) <= tolerance
+    }
+
+    /// 零边距铺满目标屏：位置取屏幕原点，尺寸取整屏。
+    /// 高度若超出系统允许范围（菜单栏保留区），会被系统自动钳制，
+    /// 实测结果与系统最大化的表现一致且无边距。
+    static func fillFrame(in display: DisplayInfo) -> WindowFrame {
+        WindowFrame(
+            minX: display.frame.minX,
+            minY: display.frame.minY,
+            width: display.frame.width,
+            height: display.frame.height
+        )
+    }
+
+    /// 把窗口尺寸限制在目标屏可见区域内（仅当装不下时缩小）。
+    /// 跨到更小的屏幕时，避免窗口超出屏幕边界。
+    static func fittingSize(_ window: WindowFrame, in display: DisplayInfo) -> WindowFrame {
+        let visible = display.visibleFrame
+        var result = window
+        if visible.width > 0, window.width > visible.width {
+            result.width = visible.width
+        }
+        if visible.height > 0, window.height > visible.height {
+            result.height = visible.height
+        }
+        return result
+    }
+
     /// 将窗口从 `source` 屏映射到 `target` 屏：
     /// 1. 保持窗口在源屏幕 frame 内的相对位置（比例不变，屏幕尺寸不同也居中归位）；
     /// 2. 结果夹紧到目标屏幕的可见区域内，保证不会跑到菜单栏或 Dock 底下，

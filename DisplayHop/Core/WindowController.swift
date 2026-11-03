@@ -60,11 +60,19 @@ protocol WindowControlling {
     /// 等待窗口退出全屏。AX 写入是异步生效的，
     /// 不等的话读到的还是全屏尺寸，移动位置会算错。
     func waitForFullScreenExit(_ window: FocusedWindow) async
+
+    /// 同时设置位置和尺寸（铺满整屏的窗口跨屏时需要）。
+    @discardableResult
+    func setFrame(_ window: FocusedWindow, to frame: WindowFrame) -> Bool
 }
 
 extension WindowControlling {
     func refreshFrame(_ window: FocusedWindow) -> WindowFrame? { nil }
     func waitForFullScreenExit(_ window: FocusedWindow) async {}
+    @discardableResult
+    func setFrame(_ window: FocusedWindow, to frame: WindowFrame) -> Bool {
+        setPosition(window, to: frame)
+    }
 }
 
 // MARK: - AX 实现
@@ -112,6 +120,36 @@ final class AXWindowController: WindowControlling {
         var point = CGPoint(x: frame.minX, y: frame.minY)
         guard let value = AXValueCreate(.cgPoint, &point) else { return false }
         return AXUIElementSetAttributeValue(element, kAXPositionAttribute as CFString, value) == .success
+    }
+
+    func setFrame(_ window: FocusedWindow, to frame: WindowFrame) -> Bool {
+        guard let backing = window.backing else { return false }
+        let element = backing as! AXUIElement
+
+        // 顺序关键：先移动位置，再改尺寸。
+        // macOS 不允许窗口大于当前所在屏幕，先写尺寸会被拒绝
+        // （跨到更大的屏时尺寸不变）。
+        writePosition(element, frame.minX, frame.minY)
+
+        // 尺寸超出屏幕时系统会钳制到该屏允许的最大值（菜单栏/Dock 保留区）。
+        // 写入可能不立即生效，重试到位置/尺寸稳定或超时。
+        writeSize(element, frame.width, frame.height)
+
+        // 部分 App 改尺寸后会重新摆放窗口，最后再校准位置。
+        writePosition(element, frame.minX, frame.minY)
+        return true
+    }
+
+    private func writePosition(_ element: AXUIElement, _ x: Double, _ y: Double) {
+        var point = CGPoint(x: x, y: y)
+        guard let value = AXValueCreate(.cgPoint, &point) else { return }
+        AXUIElementSetAttributeValue(element, kAXPositionAttribute as CFString, value)
+    }
+
+    private func writeSize(_ element: AXUIElement, _ width: Double, _ height: Double) {
+        var size = CGSize(width: width, height: height)
+        guard let value = AXValueCreate(.cgSize, &size) else { return }
+        AXUIElementSetAttributeValue(element, kAXSizeAttribute as CFString, value)
     }
 
     func waitForFullScreenExit(_ window: FocusedWindow) async {

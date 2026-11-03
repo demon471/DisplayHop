@@ -45,6 +45,11 @@ final class ScreenNavigator {
         let wasFullScreen = window.isFullScreen
         let wasMinimized = window.isMinimized
 
+        // 「铺满整屏」的窗口：不能只改位置，否则尺寸还是源屏的，到目标屏就不再铺满。
+        let sourceDisplay = displays[currentIndex]
+        let wasFilled = !wasFullScreen
+            && DisplayGeometry.isFilled(window.frame, in: sourceDisplay)
+
         if wasMinimized {
             controller.setMinimized(window, to: false)
         }
@@ -60,9 +65,26 @@ final class ScreenNavigator {
         // 不重新查询聚焦窗口（那要 7 次 XPC）。
         let currentFrame = controller.refreshFrame(window) ?? window.frame
         let source = DisplayGeometry.current(for: currentFrame, in: displays) ?? target
-        let mapped = DisplayGeometry.mappedFrame(of: currentFrame, from: source, to: target)
 
-        guard controller.setPosition(window, to: mapped) else {
+        if wasFilled {
+            // 零边距铺满目标屏：位置到屏幕原点 + 尺寸取整屏，
+            // 高度由系统自动钳制到该屏允许的最大值。
+            let filled = DisplayGeometry.fillFrame(in: target)
+            guard controller.setFrame(window, to: filled) else {
+                Log.ax.error("写入窗口尺寸失败")
+                return .failed
+            }
+            Log.core.notice(
+                "已零边距铺满并移动到 \(target.name, privacy: .public)"
+            )
+            return .moved(displayName: target.name)
+        }
+
+        let mapped = DisplayGeometry.mappedFrame(of: currentFrame, from: source, to: target)
+        // 目标屏比源屏小时，窗口可能装不下——缩小到能放下，避免超出屏幕边界。
+        let fitted = DisplayGeometry.fittingSize(mapped, in: target)
+
+        guard controller.setPosition(window, to: fitted) else {
             Log.ax.error("写入窗口位置失败")
             return .failed
         }

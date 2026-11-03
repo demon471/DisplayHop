@@ -7,6 +7,7 @@ private final class MockWindowController: WindowControlling {
     private(set) var minimizedCalls: [Bool] = []
     private(set) var fullScreenCalls: [Bool] = []
     private(set) var positionCalls: [WindowFrame] = []
+    private(set) var frameCalls: [WindowFrame] = []
     private(set) var refreshCount = 0
     private(set) var waitForFullScreenExitCount = 0
     var positionSucceeds = true
@@ -39,6 +40,12 @@ private final class MockWindowController: WindowControlling {
     func setPosition(_ window: FocusedWindow, to frame: WindowFrame) -> Bool {
         guard positionSucceeds else { return false }
         positionCalls.append(frame)
+        self.window?.frame = frame
+        return true
+    }
+
+    func setFrame(_ window: FocusedWindow, to frame: WindowFrame) -> Bool {
+        frameCalls.append(frame)
         self.window?.frame = frame
         return true
     }
@@ -237,5 +244,142 @@ final class ScreenNavigatorTests: XCTestCase {
 
         _ = await navigator.moveFocusedWindow(.next)
         XCTAssertEqual(controller.refreshCount, 1)
+// MARK: - 平铺满屏窗口
+
+    /// 「填充」状态：窗口比可见区四周内缩 8pt（macOS 的窗口边距）。
+    /// 实测数据：可见区 1728x1079 @(0,38) → 窗口 1712x1063 @(8,46)
+    func testFilledWindowStaysFilledOnTargetDisplay() async {
+        let controller = MockWindowController(
+            window: FocusedWindow(
+                frame: WindowFrame(minX: 8, minY: 46, width: 1712, height: 1063),
+                isMinimized: false,
+                isFullScreen: false,
+                backing: NSObject()
+            )
+        )
+        let main = DisplayInfo(
+            frame: DisplayFrame(minX: 0, minY: 0, width: 1728, height: 1117),
+            visibleFrame: DisplayFrame(minX: 0, minY: 38, width: 1728, height: 1079),
+            name: "Built-in"
+        )
+        let external = DisplayInfo(
+            frame: DisplayFrame(minX: 1728, minY: 0, width: 2048, height: 1152),
+            visibleFrame: DisplayFrame(minX: 1728, minY: 0, width: 2048, height: 1152),
+            name: "B2724A"
+        )
+        let navigator = ScreenNavigator(controller: controller, displaysProvider: { [main, external] })
+
+        let outcome = await navigator.moveFocusedWindow(.next)
+        XCTAssertEqual(outcome, .moved(displayName: "B2724A"))
+
+        // 必须走 setFrame（位置+尺寸一起改），不能只改位置
+        XCTAssertEqual(controller.frameCalls.count, 1)
+        XCTAssertTrue(controller.positionCalls.isEmpty)
+
+        // 零边距：位置取屏幕原点，尺寸取整屏
+        let frame = try! XCTUnwrap(controller.frameCalls.first)
+        XCTAssertEqual(frame.minX, 1728)
+        XCTAssertEqual(frame.minY, 0)
+        XCTAssertEqual(frame.width, 2048)
+        XCTAssertEqual(frame.height, 1152)
     }
+
+    /// 「缩放」状态：与可见区完全相等（内缩 0）。
+    func testZoomedWindowWithoutMarginFillsTargetExactly() async {
+        let controller = MockWindowController(
+            window: FocusedWindow(
+                frame: WindowFrame(minX: 0, minY: 38, width: 1728, height: 1079),
+                isMinimized: false,
+                isFullScreen: false,
+                backing: NSObject()
+            )
+        )
+        let main = DisplayInfo(
+            frame: DisplayFrame(minX: 0, minY: 0, width: 1728, height: 1117),
+            visibleFrame: DisplayFrame(minX: 0, minY: 38, width: 1728, height: 1079),
+            name: "Built-in"
+        )
+        let external = DisplayInfo(
+            frame: DisplayFrame(minX: 1728, minY: 0, width: 2048, height: 1152),
+            visibleFrame: DisplayFrame(minX: 1728, minY: 0, width: 2048, height: 1152),
+            name: "B2724A"
+        )
+        let navigator = ScreenNavigator(controller: controller, displaysProvider: { [main, external] })
+
+        _ = await navigator.moveFocusedWindow(.next)
+        let frame = try! XCTUnwrap(controller.frameCalls.first)
+        XCTAssertEqual(frame.minX, 1728)
+        XCTAssertEqual(frame.minY, 0)
+        XCTAssertEqual(frame.width, 2048)
+        XCTAssertEqual(frame.height, 1152)
+    }
+
+    /// 比可见区小很多（超过容忍度）的窗口不应被当成「铺满」，
+    /// 移动时只改位置、保持原尺寸。
+    func testNearlyFullButNotFilledWindowKeepsItsSize() async {
+        let controller = MockWindowController(
+            window: FocusedWindow(
+                frame: WindowFrame(minX: 100, minY: 100, width: 1200, height: 800),
+                isMinimized: false,
+                isFullScreen: false,
+                backing: NSObject()
+            )
+        )
+        let main = DisplayInfo(
+            frame: DisplayFrame(minX: 0, minY: 0, width: 1728, height: 1117),
+            visibleFrame: DisplayFrame(minX: 0, minY: 38, width: 1728, height: 1079),
+            name: "Built-in"
+        )
+        let external = DisplayInfo(
+            frame: DisplayFrame(minX: 1728, minY: 0, width: 2048, height: 1152),
+            visibleFrame: DisplayFrame(minX: 1728, minY: 0, width: 2048, height: 1152),
+            name: "B2724A"
+        )
+        let navigator = ScreenNavigator(controller: controller, displaysProvider: { [main, external] })
+
+        _ = await navigator.moveFocusedWindow(.next)
+        XCTAssertTrue(controller.frameCalls.isEmpty)
+        XCTAssertEqual(controller.positionCalls.count, 1)
+    }
+
+    /// 普通窗口（尺寸不等于可见区）不应被放大。
+    func testNonZoomedWindowUsesPositionOnly() async {
+        let controller = MockWindowController(window: focusedWindow(x: 100, y: 200))
+        let navigator = makeNavigator(controller: controller, displays: [Self.main, Self.external])
+
+        _ = await navigator.moveFocusedWindow(.next)
+        XCTAssertTrue(controller.frameCalls.isEmpty)
+        XCTAssertEqual(controller.positionCalls.count, 1)
+    }
+
+    /// 比目标屏还大的窗口，移过去后要缩小，否则会超出屏幕。
+    func testWindowTooLargeForTargetIsShrunkToFit() async {
+        let big = DisplayInfo(
+            frame: DisplayFrame(minX: 0, minY: 0, width: 2560, height: 1440),
+            visibleFrame: DisplayFrame(minX: 0, minY: 0, width: 2560, height: 1400),
+            name: "Big"
+        )
+        let small = DisplayInfo(
+            frame: DisplayFrame(minX: 2560, minY: 0, width: 1280, height: 800),
+            visibleFrame: DisplayFrame(minX: 2560, minY: 0, width: 1280, height: 800),
+            name: "Small"
+        )
+        let controller = MockWindowController(
+            window: FocusedWindow(
+                frame: WindowFrame(minX: 100, minY: 100, width: 2000, height: 1200),
+                isMinimized: false,
+                isFullScreen: false,
+                backing: NSObject()
+            )
+        )
+        let navigator = ScreenNavigator(controller: controller, displaysProvider: { [big, small] })
+
+        _ = await navigator.moveFocusedWindow(.next)
+        let frame = try! XCTUnwrap(controller.positionCalls.first)
+        XCTAssertEqual(frame.width, 1280)
+        XCTAssertEqual(frame.height, 800)
+    }
+}
+
+// MARK: - 系统填充
 }

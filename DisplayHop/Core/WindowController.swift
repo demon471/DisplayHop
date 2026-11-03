@@ -126,16 +126,17 @@ final class AXWindowController: WindowControlling {
         guard let backing = window.backing else { return false }
         let element = backing as! AXUIElement
 
-        // 顺序关键：先移动位置，再改尺寸。
-        // macOS 不允许窗口大于当前所在屏幕，先写尺寸会被拒绝
-        // （跨到更大的屏时尺寸不变）。
-        writePosition(element, frame.minX, frame.minY)
-
-        // 尺寸超出屏幕时系统会钳制到该屏允许的最大值（菜单栏/Dock 保留区）。
-        // 写入可能不立即生效，重试到位置/尺寸稳定或超时。
+        // AX 写入是异步的：连续写入会互相覆盖。
+        // 实测（外屏 2048宽 → 内屏 1728宽）：
+        //   先缩小宽度 → 等 100ms → 移动位置 → 等 100ms → 写完整尺寸
+        // 不加延时的话，缩小还没生效就移动位置，窗口跨在两屏之间，
+        // 后续尺寸写入被忽略（宽度停在旧值）。
         writeSize(element, frame.width, frame.height)
-
-        // 部分 App 改尺寸后会重新摆放窗口，最后再校准位置。
+        Thread.sleep(forTimeInterval: 0.1)
+        writePosition(element, frame.minX, frame.minY)
+        Thread.sleep(forTimeInterval: 0.1)
+        writeSize(element, frame.width, frame.height)
+        Thread.sleep(forTimeInterval: 0.1)
         writePosition(element, frame.minX, frame.minY)
         return true
     }
